@@ -1,0 +1,123 @@
+# KGE-Mageck2 Pipeline Parameter Reference
+# =========================================
+# Copy this file and edit values to configure the pipeline.
+# Then run: nextflow run kge-mageck2 -profile conda -params-file my-params.yml
+#
+# Alternatively, pass parameters on the command line:
+#   nextflow run kge-mageck2 -profile conda --count_table counts.txt --comparisons comp.txt ...
+#
+# ============================================================================
+# INPUT — What you provide determines what runs:
+# ============================================================================
+#   --count_table       → always required (starting point)
+#   --comparisons       → triggers RRA (one run per treatment/control pair)
+#   --design_matrix     → triggers MLE
+#   --comparisons + --design_matrix → runs both RRA and MLE
+# ============================================================================
+
+# ============================================================================
+# INPUT — Pre-computed count table (skip demux + counting)
+# ============================================================================
+# Fastest mode: provide a count table to jump straight to RRA/MLE + report.
+count_table: ''                 # Path to .count.txt (e.g. all_samples.count.txt)
+
+# ============================================================================
+# INPUT — Demultiplexing (BCL → FASTQ)
+# ============================================================================
+# Set demultiplex=true to start from raw Illumina BCL files.
+# Requires --run_folder and --sample_sheet.
+# Paired-end output is auto-detected from the R1/R2 file names.
+demultiplex: false
+run_folder: ''
+sample_sheet: ''
+bcl_converter: 'bcl-convert'    # 'bcl-convert' or 'bcl2fastq'
+
+# ============================================================================
+# INPUT — FASTQ (skip demux)
+# ============================================================================
+fastq_dir: ''
+fastq_pattern: '*_R1_*{fastq,fastq.gz,fq,fq.gz}'   # First read pair (guide reads)
+fastq_pattern_2: '*_R2_*{fastq,fastq.gz,fq,fq.gz}' # Second read pair (UMI reads); no match → single-end
+library_file: ''                # Required for FASTQ mode
+sample_labels: ''
+
+# ============================================================================
+# UMI OPTIONS — count unique molecules instead of raw reads (MAGeCK2)
+# ============================================================================
+# Offsets are 0-based:
+#   umi_start/umi_end   → UMI window relative to the guide, in R1
+#   umi_start_2/umi_end_2 → UMI window from the first base of R2
+# Typical 10 bp UMI in R2 (R1 = guide, R2 = UMI):
+#   umi: 'secondpair'
+#   umi_start_2: 0
+#   umi_end_2: 10
+umi: 'none'                     # 'none','firstpair','secondpair','auto'
+umi_start: -1
+umi_end: -1
+umi_start_2: -1
+umi_end_2: -1
+
+# ============================================================================
+# RRA — Comparisons file
+# ============================================================================
+# TSV file with header "treatment" and "control", one pair per row.
+# Triggers RRA analysis. Each row produces a separate MAGeCK2 test run.
+# Example:
+#   treatment	control
+#   ETP	Control_6d
+#   Mid_6d	Control_6d
+comparisons: ''
+
+# ============================================================================
+# MLE — Design matrix
+# ============================================================================
+# Design matrix file (tab-separated). Triggers MLE analysis.
+# Column 1 = sample names (must match count table header).
+# Remaining columns = binary condition indicators.
+design_matrix: ''
+include_samples: ''
+beta_labels: ''
+threads: 1
+permutation_round: 2
+
+# ============================================================================
+# MAGECK2 COUNT OPTIONS (used in FASTQ/demux mode only)
+# ============================================================================
+norm_method: 'median'           # 'none', 'median', 'total', 'control'
+control_sgrna: ''
+control_gene: ''
+sgrna_len: 20
+trim5: 'AUTO'
+count_n: false
+reverse_complement: false
+
+# ============================================================================
+# MAGECK2 TEST (RRA) OPTIONS
+# ============================================================================
+adjust_method: 'fdr'            # 'fdr', 'holm', 'pounds'
+gene_test_fdr_threshold: 0.25
+remove_zero: 'both'             # 'none','control','treatment','both','any'
+gene_lfc_method: 'median'       # 'median','mean','alphamedian','alphamean','secondbest'
+
+# ============================================================================
+# HTML REPORT OPTIONS
+# ============================================================================
+html_report: true
+skip_enrichment: false
+enrichment_top_n: 50
+enrichment_fdr: 0.05
+organism: 'human'               # 'human' or 'mouse'
+fdr_threshold: 0.05
+top_n: 20
+
+# ============================================================================
+# QC OPTIONS
+# ============================================================================
+fastqc: true
+multiqc: true
+
+# ============================================================================
+# OUTPUT
+# ============================================================================
+output_dir: './results'
+output_prefix: 'mageck2'

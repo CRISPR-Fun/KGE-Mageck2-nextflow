@@ -1,0 +1,69 @@
+# MAGeCK2 (KGE) environment for the kge-mageck2-nextflow pipeline.
+#
+# Mirrors the portable KGE-Mageck2 core spec (CRISPR-Fun/KGE-Mageck2,
+# environment_mageck2.yml): CROSS-PLATFORM (resolves on linux-64,
+# linux-aarch64, osx-64, osx-arm64) with conda-forge + bioconda only
+# (no `defaults`) so no Anaconda account is needed.
+#
+# mageck2 is NOT on conda/bioconda: it is pip-installed from the pinned git
+# commit (the ./mageck2/ KGE overlay was built against it). Its setup.py
+# compiles two bundled C++ helpers (RRA, mageckGSEA) at install time via
+# `make`, so this env ships a C/C++ compiler + make + git.
+#
+# The KGE HTML-report + UMI-figure overlay (./mageck2/) is applied by
+# install.sh / install_dardel.sh / the Dockerfile AFTER the env is created
+# — it is not part of the pip install.
+#
+# Used by: Docker build (Dockerfile), `bash install.sh` (local conda),
+# `bash install_dardel.sh` (Dardel), and the `conda` profile.
+
+name: mageckenv2
+
+channels:
+  - conda-forge
+  - bioconda
+
+channel_priority: strict
+
+dependencies:
+  - python=3.11
+  # C/C++ toolchain: mageck2's setup.py runs `make` on the rra/ + gsea/ C++
+  # sources; git is needed for the `pip install git+...` step.
+  - make
+  - c-compiler
+  - cxx-compiler
+  - git
+  # mageck2 runtime deps (kept on conda-forge so pip reuses them rather than
+  # re-downloading from PyPI).
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - statsmodels
+  - seaborn
+  - adjusttext
+  - ipykernel
+  - decoupler-py
+  # R packages required by the PDF report templates (the PDFs are knit from
+  # the .Rnw templates via Rscript, NOT from the .Rmd files — so only these
+  # four are needed). All noarch on conda-forge, so they install on every
+  # platform.
+  #   fastq_template.Rnw   -> gplots, ggplot2, xtable
+  #   plot_template.Rnw    -> xtable
+  #   (Sweave/knitr engine -> knitr)
+  - r-base
+  - r-knitr
+  - r-ggplot2
+  - r-gplots
+  - r-xtable
+  # texinfo provides texi2dvi (R's tools::texi2dvi needs it on PATH for the
+  # Sweave -> pdf step).
+  - texinfo
+  - pip
+  - pip:
+    # Pinned commit: the ./mageck2/ KGE overlay patches files from exactly
+    # this revision, so a moving git HEAD could break the overlay's context.
+    # Override at your own risk (e.g. via a modified env spec).
+    - mageck2 @ git+https://github.com/davidliwei/mageck2.git@fb2f9083eef258695e0d3a7ef2690e18fd851768
+    - plotly>=6.0
+    - pydeseq2>=0.5
